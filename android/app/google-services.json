@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "956340387437",
+    "firebase_url": "https://psas-5b61e-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "psas-5b61e",
+    "storage_bucket": "psas-5b61e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:956340387437:android:77353bfe0f9f06c16b0964",
+        "android_client_info": {
+          "package_name": "com.psas.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB7JeOPrBXvZ-Z15aIdOnZKb19Ca6DqRbM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

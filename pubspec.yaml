@@ -1,0 +1,36 @@
+name: psas_app
+description: PSAS - Predictive Switch Automation System
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Firebase Core & Backend
+  firebase_core: ^2.27.0
+  firebase_auth: ^4.17.0
+  firebase_database: ^10.5.0
+  firebase_storage: ^11.6.0
+  # Navigation & State
+  go_router: ^13.0.0
+  flutter_riverpod: ^2.5.0
+  # UI & Media
+  photo_view: ^0.14.0
+  cached_network_image: ^3.3.0
+  image_picker: ^1.1.0
+  fl_chart: ^0.68.0
+  shimmer: ^3.0.0
+  flutter_animate: ^4.5.0
+  # Utilities
+  intl: ^0.19.0
+  path_provider: ^2.1.5
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
