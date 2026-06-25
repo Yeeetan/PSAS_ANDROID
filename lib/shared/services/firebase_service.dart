@@ -91,8 +91,7 @@ final aiInboxProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
       final m = Map<String, dynamic>.from(e.value as Map);
       m['id'] = e.key;
       return m;
-    })
-        .toList();
+    }).toList();
   });
 });
 
@@ -105,13 +104,46 @@ final hubHeartbeatProvider = StreamProvider<int?>((ref) {
 });
 
 // ──────────────────────────────────────────────
+// LEAVE HOUSE EXCLUSIONS  (real-time stream)
+// ──────────────────────────────────────────────
+final leaveHouseExclusionsProvider = StreamProvider<Map<String, bool>>((ref) {
+  final db = FirebaseDatabase.instance
+      .ref('homes/$kHomeId/leave_house_excluded');
+  return db.onValue.map((event) {
+    final data = event.snapshot.value as Map<dynamic, dynamic>?;
+    if (data == null) return {};
+    return Map<String, bool>.from(
+      data.map((k, v) => MapEntry(k.toString(), v == true)),
+    );
+  });
+});
+
+// ──────────────────────────────────────────────
+// VACATION ALERT  (real-time stream)
+// Null = no active alert
+// ──────────────────────────────────────────────
+final vacationAlertProvider = StreamProvider<Map<String, dynamic>?>((ref) {
+  final db = FirebaseDatabase.instance
+      .ref('alerts/$kHomeId/vacation_check');
+  return db.onValue.map((event) {
+    final data = event.snapshot.value;
+    if (data == null) return null;
+    if (data is! Map) return null;
+    final map = Map<String, dynamic>.from(data);
+    // Only surface pending alerts
+    if (map['status'] != 'pending') return null;
+    return map;
+  });
+});
+
+// ──────────────────────────────────────────────
 // WRITE OPERATIONS
 // ──────────────────────────────────────────────
 class FirebaseService {
   static final _db   = FirebaseDatabase.instance.ref();
   static final _auth = FirebaseAuth.instance;
 
-  // Toggle a single device and log the event
+  // ── Toggle a single device and log the event ──
   static Future<void> toggleDevice(String deviceId, bool isOn) async {
     final state = isOn ? 'ON' : 'OFF';
     await _db.child('devices/$kHomeId/$deviceId/state').set(state);
@@ -123,12 +155,32 @@ class FirebaseService {
     });
   }
 
-  // Turn ALL devices off in a single RTDB multi-path update
+  // ── Turn OFF all non-excluded devices ──
   static Future<void> turnAllOff(List<DeviceModel> devices) async {
-    final updates = <String, dynamic>{
-      for (final d in devices) 'devices/$kHomeId/${d.id}/state': 'OFF',
-    };
-    await _db.update(updates);
+    final snapshot = await FirebaseDatabase.instance
+        .ref('homes/$kHomeId/leave_house_excluded')
+        .get();
+    final exclusions = (snapshot.value as Map<dynamic, dynamic>?) ?? {};
+
+    final toTurnOff = devices
+        .where((d) => exclusions[d.room] != true)
+        .toList();
+
+    if (toTurnOff.isNotEmpty) {
+      final updates = <String, dynamic>{
+        for (final d in toTurnOff) 'devices/$kHomeId/${d.id}/state': 'OFF',
+      };
+      await _db.update(updates);
+    }
+
+    // Write Leave House trigger for Python
+    await _db.child('homes/$kHomeId/leave_house_trigger').set({
+      'timestamp': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      'devices_to_off': {
+        for (final d in toTurnOff) d.id: true,
+      },
+    });
+
     await _db.child('interaction_logs/$kHomeId').push().set({
       'timestamp':    DateTime.now().millisecondsSinceEpoch ~/ 1000,
       'device_id':    'ALL',
@@ -137,19 +189,48 @@ class FirebaseService {
     });
   }
 
-  // Floor CRUD
-  static Future<void> upsertFloor(String floorId, Map<String, dynamic> data) async =>
+  // ── Leave House exclusion toggle ──
+  static Future<void> setLeaveHouseExclusion(
+      String roomName, bool excluded) async {
+    await _db
+        .child('homes/$kHomeId/leave_house_excluded/$roomName')
+        .set(excluded);
+  }
+
+  // ── Vacation alert responses ──
+  static Future<void> respondVacationAlert(
+      String status, {int? remindAfterDays}) async {
+    final update = <String, dynamic>{'status': status};
+    if (remindAfterDays != null) {
+      update['remind_after_days'] = remindAfterDays;
+    }
+    await _db
+        .child('alerts/$kHomeId/vacation_check')
+        .update(update);
+  }
+
+  static Future<void> dismissVacationAlert() async {
+    await _db
+        .child('alerts/$kHomeId/vacation_check')
+        .update({'status': 'dismissed'});
+  }
+
+  // ── Floor CRUD ──
+  static Future<void> upsertFloor(
+      String floorId, Map<String, dynamic> data) async =>
       _db.child('homes/$kHomeId/floors/$floorId').update(data);
 
-  // Pin CRUD
-  static Future<void> upsertPin(String floorId, String pinId, Map<String, dynamic> data) async =>
+  // ── Pin CRUD ──
+  static Future<void> upsertPin(
+      String floorId, String pinId, Map<String, dynamic> data) async =>
       _db.child('homes/$kHomeId/floors/$floorId/pins/$pinId').set(data);
 
   static Future<void> deletePin(String floorId, String pinId) async =>
       _db.child('homes/$kHomeId/floors/$floorId/pins/$pinId').remove();
 
-  // Routine CRUD
-  static Future<void> upsertRoutine(String routineId, Map<String, dynamic> data) async =>
+  // ── Routine CRUD ──
+  static Future<void> upsertRoutine(
+      String routineId, Map<String, dynamic> data) async =>
       _db.child('automation_rules/$kHomeId/$routineId').set(data);
 
   static Future<void> deleteRoutine(String routineId) async =>
@@ -159,17 +240,18 @@ class FirebaseService {
       _db.child('automation_rules/$kHomeId/$routineId/status')
           .set(active ? 'active' : 'inactive');
 
-  // AI Inbox actions
+  // ── AI Inbox actions ──
   static Future<void> approveInboxRule(
       String pendingId, Map<String, dynamic> suggestedRule) async {
     final newRef = _db.child('automation_rules/$kHomeId').push();
-    await newRef.set({...suggestedRule, 'status': 'active', 'source': 'AI_GENERATED'});
+    await newRef.set(
+        {...suggestedRule, 'status': 'active', 'source': 'AI_GENERATED'});
     await _db.child('ai_inbox/$kHomeId/$pendingId/status').set('approved');
   }
 
   static Future<void> rejectInboxRule(String pendingId) async =>
       _db.child('ai_inbox/$kHomeId/$pendingId/status').set('rejected');
 
-  // Auth
+  // ── Auth ──
   static Future<void> signOut() => _auth.signOut();
 }

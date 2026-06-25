@@ -1,3 +1,4 @@
+//D:\CODES\PSAS_ANDROID\lib\features\automation\widgets\timeline_strip.dart
 import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
 import '../models/routine_model.dart';

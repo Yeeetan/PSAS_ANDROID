@@ -4,8 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:go_router/go_router.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../shared/services/firebase_service.dart';
 import '../shared/widgets/app_shell.dart';
 import '../features/auth/login_screen.dart';
@@ -16,6 +14,7 @@ import '../features/automation/screens/automation_screen.dart';
 import '../features/automation/screens/routine_editor_screen.dart';
 import '../features/ai_inbox/screens/inbox_screen.dart';
 import '../features/settings/screens/settings_screen.dart';
+import '../features/settings/screens/leave_house_settings.dart';
 
 class GoRouterRefreshStream extends ChangeNotifier {
   late final StreamSubscription<dynamic> _subscription;
@@ -33,12 +32,11 @@ class GoRouterRefreshStream extends ChangeNotifier {
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/home',
-    // This triggers a safe redirect check without recreating the router
-    refreshListenable: GoRouterRefreshStream(FirebaseAuth.instance.authStateChanges()),
+    refreshListenable: GoRouterRefreshStream(
+        FirebaseAuth.instance.authStateChanges()),
     redirect: (context, state) {
-      final isLoggedIn = FirebaseAuth.instance.currentUser != null;
+      final isLoggedIn  = FirebaseAuth.instance.currentUser != null;
       final isLoginPage = state.matchedLocation == '/login';
-
       if (!isLoggedIn && !isLoginPage) return '/login';
       if (isLoggedIn && isLoginPage) return '/home';
       return null;
@@ -71,6 +69,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/routine-editor',
         builder: (_, state) =>
             RoutineEditorScreen(routineId: state.uri.queryParameters['id']),
+      ),
+      GoRoute(
+        path: '/leave-house-settings',
+        builder: (_, __) => const LeaveHouseSettingsScreen(),
       ),
     ],
   );
