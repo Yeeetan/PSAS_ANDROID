@@ -137,6 +137,19 @@ final vacationAlertProvider = StreamProvider<Map<String, dynamic>?>((ref) {
 });
 
 // ──────────────────────────────────────────────
+// PAIRING MODE  (real-time stream)
+// Null = no pairing session in progress / not yet loaded
+// ──────────────────────────────────────────────
+final pairingModeProvider = StreamProvider<Map<String, dynamic>?>((ref) {
+  final db = FirebaseDatabase.instance.ref('pairing_mode/$kHomeId');
+  return db.onValue.map((event) {
+    final data = event.snapshot.value;
+    if (data == null || data is! Map) return null;
+    return Map<String, dynamic>.from(data);
+  });
+});
+
+// ──────────────────────────────────────────────
 // WRITE OPERATIONS
 // ──────────────────────────────────────────────
 class FirebaseService {
@@ -214,6 +227,32 @@ class FirebaseService {
         .child('alerts/$kHomeId/vacation_check')
         .update({'status': 'dismissed'});
   }
+
+  // ── Pairing ──
+  // Full .set() (not .update()) so every new window starts from a clean
+  // slate — no leftover duplicate_room/found_device_id from a previous
+  // pairing session can leak into this one.
+  static Future<void> startPairing() async {
+    await _db.child('pairing_mode/$kHomeId').set({
+      'active':     true,
+      'started_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+    });
+  }
+
+  static Future<void> cancelPairing() async =>
+      _db.child('pairing_mode/$kHomeId/active').set(false);
+
+  // Demo-only stand-in for a real wall node's HELLO broadcast when no
+  // spare hardware is available to physically pair. See main.py's
+  // on_simulate_hello() — writing a room name here behaves exactly like
+  // a real node announcing itself during an open pairing window.
+  static Future<void> simulateHello(String room) async =>
+      _db.child('test_simulate_hello/$kHomeId').set(room);
+
+  // ── Device CRUD ──
+  static Future<void> upsertDevice(
+      String deviceId, Map<String, dynamic> data) async =>
+      _db.child('devices/$kHomeId/$deviceId').update(data);
 
   // ── Floor CRUD ──
   static Future<void> upsertFloor(

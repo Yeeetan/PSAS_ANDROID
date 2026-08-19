@@ -7,6 +7,7 @@ import '../../../shared/services/firebase_service.dart';
 import '../models/pin_model.dart';
 import '../widgets/floor_plan_viewer.dart';
 import '../models/floor_model.dart';
+import '../../../shared/models/device_model.dart';
 
 class PinPlacementScreen extends ConsumerWidget {
   final String floorId;
@@ -63,6 +64,7 @@ class PinPlacementScreen extends ConsumerWidget {
       double xPct, double yPct, List devices) async {
     final labelCtrl = TextEditingController();
     final selectedIds = <String>{};
+    bool createVirtual = false; // NEW: State for the checkbox
 
     await showDialog(
       context: context,
@@ -80,7 +82,21 @@ class PinPlacementScreen extends ConsumerWidget {
                   decoration: const InputDecoration(labelText: 'Label', hintText: 'Bedroom'),
                 ),
                 const SizedBox(height: 14),
-                const Text('Link devices',
+
+                // NEW: Virtual Switch Checkbox
+                CheckboxListTile(
+                  dense: true,
+                  title: const Text('Create Virtual Switch', style: TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: const Text('Generates an app-only device with no physical hardware.'),
+                  value: createVirtual,
+                  onChanged: (v) => setDs(() => createVirtual = v ?? false),
+                  activeColor: Colors.amber, // Matches your theme
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                ),
+                const Divider(),
+
+                const Text('Link existing devices',
                     style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 6),
                 ...devices.map((d) => CheckboxListTile(
@@ -90,7 +106,7 @@ class PinPlacementScreen extends ConsumerWidget {
                   value: selectedIds.contains(d.id),
                   onChanged: (v) => setDs(() =>
                   v == true ? selectedIds.add(d.id) : selectedIds.remove(d.id)),
-                  activeColor: AppColors.primary,
+                  activeColor: Colors.blue, // Assuming AppColors.primary is blue
                   controlAffinity: ListTileControlAffinity.leading,
                   contentPadding: EdgeInsets.zero,
                 )),
@@ -103,11 +119,33 @@ class PinPlacementScreen extends ConsumerWidget {
               onPressed: () async {
                 if (labelCtrl.text.trim().isEmpty) return;
                 final pinId = 'pin_${DateTime.now().millisecondsSinceEpoch}';
+
+                // NEW: Handle Virtual Device Creation and Database Push
+                if (createVirtual) {
+                  final newDeviceId = 'virtual_${DateTime.now().millisecondsSinceEpoch}';
+
+                  // Construct the virtual device model
+                  final newDevice = DeviceModel(
+                    id: newDeviceId,
+                    name: '${labelCtrl.text.trim()} (Virtual)',
+                    room: labelCtrl.text.trim(),
+                    state: 'OFF',
+                    isVirtual: true,
+                  );
+
+// Push the new virtual switch to Firebase!
+                  await FirebaseService.upsertDevice(newDeviceId, newDevice.toMap());
+
+// Automatically link this new virtual device to the pin
+                  selectedIds.add(newDeviceId);
+                }
+
                 final pin = PinModel(
                   id: pinId, xPct: xPct, yPct: yPct,
                   label: labelCtrl.text.trim(),
                   linkedDeviceIds: selectedIds.toList(),
                 );
+
                 await FirebaseService.upsertPin(floorId, pinId, pin.toMap());
                 if (ctx.mounted) Navigator.pop(ctx);
               },
@@ -122,13 +160,13 @@ class PinPlacementScreen extends ConsumerWidget {
   Future<void> _deletePin(BuildContext context, PinModel pin) async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Delete pin?'),
         content: Text('Remove "${pin.label}"?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             child: const Text('Delete'),
           ),

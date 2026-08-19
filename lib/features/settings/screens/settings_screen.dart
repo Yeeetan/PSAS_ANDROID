@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../../app/theme.dart';
 import '../../../shared/services/firebase_service.dart';
 import '../../../shared/widgets/system_health_badge.dart';
+import '../widgets/pairing_dialog.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -99,6 +100,19 @@ class SettingsScreen extends ConsumerWidget {
             title: 'Manage floors & pins',
             subtitle: 'Upload plans, place device pins',
             onTap: () => context.push('/floor-setup'),
+            showArrow: true,
+          ),
+          const SizedBox(height: 20),
+
+          _section('Devices'),
+          _tile(
+            icon: Icons.add_circle_outline_rounded,
+            title: 'Add a switch',
+            subtitle: 'Pair a newly-installed wall node',
+            onTap: () => showDialog(
+              context: context,
+              builder: (_) => const PairingDialog(),
+            ),
             showArrow: true,
           ),
           const SizedBox(height: 20),

@@ -280,7 +280,7 @@ class AutomationScreen extends ConsumerWidget {
     final ctrl = TextEditingController();
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Add category'),
         content: TextField(
           controller: ctrl,
@@ -291,7 +291,7 @@ class AutomationScreen extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () async {
@@ -301,7 +301,7 @@ class AutomationScreen extends ConsumerWidget {
               await FirebaseDatabase.instance
                   .ref('homes/$kHomeId/custom_categories')
                   .set(updated);
-              if (context.mounted) Navigator.pop(context);
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
             },
             child: const Text('Add'),
           ),
@@ -314,16 +314,16 @@ class AutomationScreen extends ConsumerWidget {
       BuildContext context, String cat, List<String> all) async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Delete category?'),
         content:
         Text('Delete "$cat"? Routines inside will not be deleted.'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
+              onPressed: () => Navigator.pop(dialogContext, false),
               child: const Text('Cancel')),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.error),
             child: const Text('Delete'),

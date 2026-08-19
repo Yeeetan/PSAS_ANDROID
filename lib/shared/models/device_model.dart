@@ -6,6 +6,8 @@ class DeviceModel {
   final String pinId;
   final String state;
   final String type;
+  final bool isVirtual;
+
 
   const DeviceModel({
     required this.id,
@@ -15,6 +17,7 @@ class DeviceModel {
     this.pinId   = '',
     required this.state,
     this.type = 'switch',
+    this.isVirtual = false,
   });
 
   bool get isOn => state == 'ON';
@@ -28,6 +31,7 @@ class DeviceModel {
       pinId:   map['pin_id']   as String? ?? '',
       state:   map['state']    as String? ?? 'OFF',
       type:    map['type']     as String? ?? 'switch',
+      isVirtual: map['isVirtual']  as bool?   ?? false,
     );
   }
 
@@ -38,6 +42,7 @@ class DeviceModel {
     'pin_id':   pinId,
     'state':    state,
     'type':     type,
+    'isVirtual': isVirtual,
   };
 
   DeviceModel copyWith({String? state}) => DeviceModel(
@@ -48,5 +53,6 @@ class DeviceModel {
     pinId:   pinId,
     state:   state ?? this.state,
     type:    type,
+    isVirtual: isVirtual ?? this.isVirtual,
   );
 }

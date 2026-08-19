@@ -30,29 +30,36 @@ class FloorPlanViewer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (floor.planImageUrl == null) return _placeholder();
-
+    // A floor plan photo is optional, not required, to start placing
+    // switches -- the old early-return here made a brand-new floor (which
+    // never has plan_image_url set until someone uploads one) render a
+    // static placeholder with no GestureDetector at all, so long-press
+    // could never register on it. Now it always renders an interactive
+    // canvas -- the uploaded photo if there is one, otherwise a plain
+    // blank surface -- either way wrapped in the same long-press handler.
     return LayoutBuilder(builder: (context, constraints) {
       final w = constraints.maxWidth;
       final h = constraints.maxHeight;
 
       return Stack(
         children: [
-          // Pan/zoom image
           GestureDetector(
+            behavior: HitTestBehavior.opaque,
             onLongPressStart: editMode
                 ? (d) => onLongPress?.call(
                 (d.localPosition.dx / w).clamp(0.0, 1.0),
                 (d.localPosition.dy / h).clamp(0.0, 1.0))
                 : null,
-            child: PhotoView(
+            child: floor.planImageUrl != null
+                ? PhotoView(
               imageProvider: floor.planImageUrl!.startsWith('http')
                   ? CachedNetworkImageProvider(floor.planImageUrl!) as ImageProvider
                   : FileImage(File(floor.planImageUrl!)),
               minScale: PhotoViewComputedScale.contained,
               maxScale: PhotoViewComputedScale.covered * 3,
               backgroundDecoration: const BoxDecoration(color: AppColors.surface),
-            ),
+            )
+                : _blankCanvas(),
           ),
           // Pins (Now using _DraggablePin)
           ...floor.pins.map((pin) {
@@ -91,6 +98,13 @@ class FloorPlanViewer extends StatelessWidget {
       );
     });
   }
+
+  Widget _blankCanvas() => Container(
+    width: double.infinity,
+    height: double.infinity,
+    color: AppColors.surface,
+    child: !editMode ? _placeholder() : null,
+  );
 
   Widget _placeholder() => Center(
     child: Column(
