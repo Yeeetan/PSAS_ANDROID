@@ -6,12 +6,12 @@ import 'app/theme.dart';
 
 // Values from your google-services.json
 const _firebaseOptions = FirebaseOptions(
-  apiKey:            'AIzaSyB7JeOPrBXvZ-Z15aIdOnZKb19Ca6DqRbM',
-  appId:             '1:956340387437:android:77353bfe0f9f06c16b0964',
-  messagingSenderId: '956340387437',
-  projectId:         'psas-5b61e',
-  databaseURL:       'https://psas-5b61e-default-rtdb.asia-southeast1.firebasedatabase.app/',
-  storageBucket:     'psas-5b61e.appspot.com',
+  apiKey:            '',
+  appId:             '',
+  messagingSenderId: '',
+  projectId:         '',
+  databaseURL:       '',
+  storageBucket:     '',
 );
 
 void main() async {
